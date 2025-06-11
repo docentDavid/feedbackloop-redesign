@@ -34,16 +34,6 @@ const Header = () => {
               Dashboard
             </Link>
             <Link
-              href="/record"
-              className={`${
-                isActive("/record")
-                  ? "text-blue-600 font-medium"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Record
-            </Link>
-            <Link
               href="/progress"
               className={`${
                 isActive("/progress")
@@ -110,17 +100,6 @@ const Header = () => {
               onClick={() => setIsMenuOpen(false)}
             >
               Dashboard
-            </Link>
-            <Link
-              href="/record"
-              className={`block ${
-                isActive("/record")
-                  ? "text-blue-600 font-medium"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Record
             </Link>
             <Link
               href="/progress"

@@ -1,477 +1,255 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "../lib/supabase";
 
-// Zelfde classOptions en classStudents als in dashboard (voor demo, in praktijk zou je dit delen)
-const classOptions = [
-  "Media - Semester 2 - Tilburg",
-  "Media Semester 3 - Tilburg",
-  "Main - Front End Development - Tilburg",
-  "Main - Front End Development - Eindhoven",
-] as const;
-type ClassType = (typeof classOptions)[number];
-
-function getAvatar(gender: "men" | "women", idx: number) {
-  return `https://randomuser.me/api/portraits/${gender}/${idx % 100}.jpg`;
-}
-
-const classStudents: Record<
-  ClassType,
-  Array<{ name: string; email: string; studentId: string; avatar: string }>
-> = {
-  "Media - Semester 2 - Tilburg": [
-    {
-      name: "Daan de Vries",
-      email: "d.devries@student.fontys.nl",
-      studentId: "S1002001",
-      avatar: getAvatar("men", 1),
-    },
-    {
-      name: "Lieke Bakker",
-      email: "l.bakker@student.fontys.nl",
-      studentId: "S1002002",
-      avatar: getAvatar("women", 2),
-    },
-    {
-      name: "Tim van Dijk",
-      email: "t.vandijk@student.fontys.nl",
-      studentId: "S1002003",
-      avatar: getAvatar("men", 3),
-    },
-    {
-      name: "Sanne Jansen",
-      email: "s.jansen@student.fontys.nl",
-      studentId: "S1002004",
-      avatar: getAvatar("women", 4),
-    },
-    {
-      name: "Niels Visser",
-      email: "n.visser@student.fontys.nl",
-      studentId: "S1002005",
-      avatar: getAvatar("men", 5),
-    },
-    {
-      name: "Femke Smit",
-      email: "f.smit@student.fontys.nl",
-      studentId: "S1002006",
-      avatar: getAvatar("women", 6),
-    },
-    {
-      name: "Bram Vermeulen",
-      email: "b.vermeulen@student.fontys.nl",
-      studentId: "S1002007",
-      avatar: getAvatar("men", 7),
-    },
-    {
-      name: "Eva Mulder",
-      email: "e.mulder@student.fontys.nl",
-      studentId: "S1002008",
-      avatar: getAvatar("women", 8),
-    },
-    {
-      name: "Ruben de Jong",
-      email: "r.dejong@student.fontys.nl",
-      studentId: "S1002009",
-      avatar: getAvatar("men", 9),
-    },
-    {
-      name: "Lisa van den Berg",
-      email: "l.vandenberg@student.fontys.nl",
-      studentId: "S1002010",
-      avatar: getAvatar("women", 10),
-    },
-    {
-      name: "Jasper Willems",
-      email: "j.willems@student.fontys.nl",
-      studentId: "S1002011",
-      avatar: getAvatar("men", 11),
-    },
-    {
-      name: "Sophie Peters",
-      email: "s.peters@student.fontys.nl",
-      studentId: "S1002012",
-      avatar: getAvatar("women", 12),
-    },
-    {
-      name: "Tom van Leeuwen",
-      email: "t.vanleeuwen@student.fontys.nl",
-      studentId: "S1002013",
-      avatar: getAvatar("men", 13),
-    },
-    {
-      name: "Mila Vos",
-      email: "m.vos@student.fontys.nl",
-      studentId: "S1002014",
-      avatar: getAvatar("women", 14),
-    },
-  ],
-  "Media Semester 3 - Tilburg": [
-    {
-      name: "Rick de Groot",
-      email: "r.degroot@student.fontys.nl",
-      studentId: "S1002021",
-      avatar: getAvatar("men", 21),
-    },
-    {
-      name: "Julia Kuipers",
-      email: "j.kuipers@student.fontys.nl",
-      studentId: "S1002022",
-      avatar: getAvatar("women", 22),
-    },
-    {
-      name: "Max van Dam",
-      email: "m.vandam@student.fontys.nl",
-      studentId: "S1002023",
-      avatar: getAvatar("men", 23),
-    },
-    {
-      name: "Emma de Boer",
-      email: "e.deboer@student.fontys.nl",
-      studentId: "S1002024",
-      avatar: getAvatar("women", 24),
-    },
-    {
-      name: "Lars Smits",
-      email: "l.smits@student.fontys.nl",
-      studentId: "S1002025",
-      avatar: getAvatar("men", 25),
-    },
-    {
-      name: "Tessa Jacobs",
-      email: "t.jacobs@student.fontys.nl",
-      studentId: "S1002026",
-      avatar: getAvatar("women", 26),
-    },
-    {
-      name: "Dylan van der Meer",
-      email: "d.vandermeer@student.fontys.nl",
-      studentId: "S1002027",
-      avatar: getAvatar("men", 27),
-    },
-    {
-      name: "Noa de Wit",
-      email: "n.dewit@student.fontys.nl",
-      studentId: "S1002028",
-      avatar: getAvatar("women", 28),
-    },
-    {
-      name: "Jelle Bakker",
-      email: "j.bakker@student.fontys.nl",
-      studentId: "S1002029",
-      avatar: getAvatar("men", 29),
-    },
-    {
-      name: "Saar van Dongen",
-      email: "s.vandongen@student.fontys.nl",
-      studentId: "S1002030",
-      avatar: getAvatar("women", 30),
-    },
-    {
-      name: "Mats de Bruin",
-      email: "m.debruin@student.fontys.nl",
-      studentId: "S1002031",
-      avatar: getAvatar("men", 31),
-    },
-    {
-      name: "Fleur Smit",
-      email: "f.smit2@student.fontys.nl",
-      studentId: "S1002032",
-      avatar: getAvatar("women", 32),
-    },
-    {
-      name: "Joris van Vliet",
-      email: "j.vanvliet@student.fontys.nl",
-      studentId: "S1002033",
-      avatar: getAvatar("men", 33),
-    },
-    {
-      name: "Lotte de Jong",
-      email: "l.dejong@student.fontys.nl",
-      studentId: "S1002034",
-      avatar: getAvatar("women", 34),
-    },
-  ],
-  "Main - Front End Development - Tilburg": [
-    {
-      name: "Pim van der Linden",
-      email: "p.vanderlinden@student.fontys.nl",
-      studentId: "S1002041",
-      avatar: getAvatar("men", 41),
-    },
-    {
-      name: "Sven de Graaf",
-      email: "s.degraaf@student.fontys.nl",
-      studentId: "S1002042",
-      avatar: getAvatar("men", 42),
-    },
-    {
-      name: "Nina van den Heuvel",
-      email: "n.vandenheuvel@student.fontys.nl",
-      studentId: "S1002043",
-      avatar: getAvatar("women", 43),
-    },
-    {
-      name: "Ahmed El Amrani",
-      email: "a.elamrani@student.fontys.nl",
-      studentId: "S1002044",
-      avatar: getAvatar("men", 44),
-    },
-    {
-      name: "Yasmin Benali",
-      email: "y.benali@student.fontys.nl",
-      studentId: "S1002045",
-      avatar: getAvatar("women", 45),
-    },
-    {
-      name: "Omar Al-Farsi",
-      email: "o.alfarsi@student.fontys.nl",
-      studentId: "S1002046",
-      avatar: getAvatar("men", 46),
-    },
-    {
-      name: "Ayşe Yılmaz",
-      email: "a.yilmaz@student.fontys.nl",
-      studentId: "S1002047",
-      avatar: getAvatar("women", 47),
-    },
-    {
-      name: "Mehmet Kaya",
-      email: "m.kaya@student.fontys.nl",
-      studentId: "S1002048",
-      avatar: getAvatar("men", 48),
-    },
-    {
-      name: "Fatima Zahra",
-      email: "f.zahra@student.fontys.nl",
-      studentId: "S1002049",
-      avatar: getAvatar("women", 49),
-    },
-    {
-      name: "James Smith",
-      email: "j.smith@student.fontys.nl",
-      studentId: "S1002050",
-      avatar: getAvatar("men", 50),
-    },
-    {
-      name: "Emily Johnson",
-      email: "e.johnson@student.fontys.nl",
-      studentId: "S1002051",
-      avatar: getAvatar("women", 51),
-    },
-    {
-      name: "Pierre Dubois",
-      email: "p.dubois@student.fontys.nl",
-      studentId: "S1002052",
-      avatar: getAvatar("men", 52),
-    },
-    {
-      name: "Sophie Lefevre",
-      email: "s.lefevre@student.fontys.nl",
-      studentId: "S1002053",
-      avatar: getAvatar("women", 53),
-    },
-    {
-      name: "Giulia Rossi",
-      email: "g.rossi@student.fontys.nl",
-      studentId: "S1002054",
-      avatar: getAvatar("women", 54),
-    },
-  ],
-  "Main - Front End Development - Eindhoven": [
-    {
-      name: "Carlos García",
-      email: "c.garcia@student.fontys.nl",
-      studentId: "S1002061",
-      avatar: getAvatar("men", 61),
-    },
-    {
-      name: "Maria Fernandez",
-      email: "m.fernandez@student.fontys.nl",
-      studentId: "S1002062",
-      avatar: getAvatar("women", 62),
-    },
-    {
-      name: "Ali Hassan",
-      email: "a.hassan@student.fontys.nl",
-      studentId: "S1002063",
-      avatar: getAvatar("men", 63),
-    },
-    {
-      name: "Sofia Romano",
-      email: "s.romano@student.fontys.nl",
-      studentId: "S1002064",
-      avatar: getAvatar("women", 64),
-    },
-    {
-      name: "John Brown",
-      email: "j.brown@student.fontys.nl",
-      studentId: "S1002065",
-      avatar: getAvatar("men", 65),
-    },
-    {
-      name: "Amina El Idrissi",
-      email: "a.elidrissi@student.fontys.nl",
-      studentId: "S1002066",
-      avatar: getAvatar("women", 66),
-    },
-    {
-      name: "Lucas Moreau",
-      email: "l.moreau@student.fontys.nl",
-      studentId: "S1002067",
-      avatar: getAvatar("men", 67),
-    },
-    {
-      name: "Sara Bianchi",
-      email: "s.bianchi@student.fontys.nl",
-      studentId: "S1002068",
-      avatar: getAvatar("women", 68),
-    },
-    {
-      name: "Mohammed Bouzid",
-      email: "m.bouzid@student.fontys.nl",
-      studentId: "S1002069",
-      avatar: getAvatar("men", 69),
-    },
-    {
-      name: "Emma Dubois",
-      email: "e.dubois@student.fontys.nl",
-      studentId: "S1002070",
-      avatar: getAvatar("women", 70),
-    },
-    {
-      name: "David Wilson",
-      email: "d.wilson@student.fontys.nl",
-      studentId: "S1002071",
-      avatar: getAvatar("men", 71),
-    },
-    {
-      name: "Fatma Yildiz",
-      email: "f.yildiz@student.fontys.nl",
-      studentId: "S1002072",
-      avatar: getAvatar("women", 72),
-    },
-    {
-      name: "Hugo Martin",
-      email: "h.martin@student.fontys.nl",
-      studentId: "S1002073",
-      avatar: getAvatar("men", 73),
-    },
-    {
-      name: "Isabella Costa",
-      email: "i.costa@student.fontys.nl",
-      studentId: "S1002074",
-      avatar: getAvatar("women", 74),
-    },
-  ],
-};
-
-// Voeg feedbackmomenten toe
-const feedbackMoments = [
-  {
-    id: "1",
-    name: "Portfolio / FeedPulse - versie 1 (Week 6)",
-    date: "2023-03-30",
-    description: "First iteration of your portfolio",
-  },
-  {
-    id: "2",
-    name: "Portfolio / FeedPulse - versie 2 (Week 10)",
-    date: "2023-05-04",
-    description: "Second iteration of your portfolio",
-  },
-  {
-    id: "3",
-    name: "Portfolio / FeedPulse - versie 3 (Week 15)",
-    date: "2023-06-15",
-    description: "Third iteration of your portfolio",
-  },
-  {
-    id: "4",
-    name: "Portfolio / FeedPulse - versie 4 (Week 18)",
-    date: "2023-07-02",
-    description: "Fourth/Final iteration of your portfolio",
-  },
-];
-
-// Learning outcomes data
-const learningOutcomes = [
-  {
-    id: "1",
-    title:
-      "LO1 - Conceptualize, design, and develop interactive media products",
-    description:
-      "You create engaging concepts and translate them into interactive validated media products by applying user-centred design principles, and visual design techniques and by exploring emerging trends and developments in media, design and technologies.",
-    level: "undefined",
-    feedback: "",
-    feedforward: "",
-  },
-  {
-    id: "2",
-    title: "LO2 - Transferable production",
-    description:
-      "You document and comment on your code using version control in a personal and team context and communicate technical recommendations.",
-    level: "undefined",
-    feedback: "",
-    feedforward: "",
-  },
-  {
-    id: "3",
-    title: "LO3 - Creative iterations",
-    description:
-      "You present the successive iterations of your creative process, and the connections between them, of your methodically substantiated, iterative design and development process.",
-    level: "undefined",
-    feedback: "",
-    feedforward: "",
-  },
-  {
-    id: "4",
-    title: "LO4 - Professional standards",
-    description:
-      "Both individually and in teams, you apply a relevant methodological approach used in the professional field to formulate project goals, involve stakeholders, conduct applied (BA) or action-oriented (AD) research, provide advice, make decisions, and deliver reports. In doing so, you consider the relevant ethical, intercultural, and sustainable aspects.",
-    level: "undefined",
-    feedback: "",
-    feedforward: "",
-  },
-  {
-    id: "5",
-    title: "LO5 - Personal leadership",
-    description:
-      "You are aware of your strengths and weaknesses, both in ICT and your personal development. You choose actions aligning with your core values to promote your personal growth and develop your learning attitude.",
-    level: "undefined",
-    feedback: "",
-    feedforward: "",
-  },
-];
-
-const TEACHER_NAME = "William Janssen";
-
-export default function RecordPage() {
+export default function Record() {
   const searchParams = useSearchParams();
-  const className = searchParams.get("class") as ClassType | null;
+  const className = searchParams.get("class");
   const studentId = searchParams.get("student");
 
-  const student = useMemo(() => {
-    if (!className || !studentId) return null;
-    const students = classStudents[className as ClassType];
-    return students.find((s) => s.studentId === studentId) || null;
-  }, [className, studentId]);
+  console.log("Record page params:", { className, studentId });
+
+  // Add early return with error message if parameters are missing
+  if (!className || !studentId) {
+    return (
+      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow p-8 mt-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-4">
+            Missing Parameters
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Please select a class and student from the dashboard.
+          </p>
+          <Link
+            href="/dashboard"
+            className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+          >
+            Go to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const [teacherName, setTeacherName] = useState<string>("Loading...");
+
+  // Fetch teacher name
+  useEffect(() => {
+    const fetchTeacherName = async () => {
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error) {
+          console.error("Error fetching user:", error);
+          setTeacherName("Unknown Teacher");
+          return;
+        }
+
+        if (!user) {
+          console.error("No user found");
+          setTeacherName("Unknown Teacher");
+          return;
+        }
+
+        const { data: teacherData, error: teacherError } = await supabase
+          .from("teachers")
+          .select("name")
+          .eq("email", user.email)
+          .single();
+
+        if (teacherError) {
+          console.error("Error fetching teacher:", teacherError);
+          setTeacherName("Unknown Teacher");
+        } else if (teacherData) {
+          setTeacherName(teacherData.name);
+        }
+      } catch (error) {
+        console.error("Error in fetchTeacherName:", error);
+        setTeacherName("Unknown Teacher");
+      }
+    };
+
+    fetchTeacherName();
+  }, []);
+
+  const [student, setStudent] = useState<{
+    name: string;
+    email: string;
+    studentId: string;
+    avatar: string;
+  }>({
+    name: "",
+    email: "",
+    studentId: "",
+    avatar: "",
+  });
+
+  const [feedbackMoments, setFeedbackMoments] = useState<
+    Array<{
+      id: string;
+      name: string;
+      date: string;
+      description: string;
+    }>
+  >([]);
+
+  const [learningOutcomes, setLearningOutcomes] = useState<
+    Array<{
+      id: string;
+      title: string;
+      description: string;
+      level: string;
+    }>
+  >([]);
+
+  // Fetch classes
+  useEffect(() => {
+    const fetchClasses = async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("name")
+        .order("name", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching classes:", error);
+      } else if (data) {
+        // Classes are now available in the data array
+        console.log(
+          "Available classes:",
+          data.map((c) => c.name)
+        );
+      }
+    };
+
+    fetchClasses();
+  }, []);
+
+  // Fetch feedback moments
+  useEffect(() => {
+    const fetchFeedbackMoments = async () => {
+      const { data, error } = await supabase
+        .from("feedback_moments")
+        .select("*")
+        .order("date", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching feedback moments:", error);
+      } else if (data) {
+        setFeedbackMoments(
+          data.map((moment) => ({
+            id: moment.id.toString(),
+            name: moment.name,
+            date: moment.date,
+            description: moment.description,
+          }))
+        );
+      }
+    };
+
+    fetchFeedbackMoments();
+  }, []);
+
+  // Fetch learning outcomes
+  useEffect(() => {
+    const fetchLearningOutcomes = async () => {
+      const { data, error } = await supabase
+        .from("learning_outcomes")
+        .select("*")
+        .order("title", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching learning outcomes:", error);
+      } else if (data) {
+        setLearningOutcomes(
+          data.map((outcome) => ({
+            id: outcome.id.toString(),
+            title: outcome.title,
+            description: outcome.description,
+            level: outcome.level,
+          }))
+        );
+      }
+    };
+
+    fetchLearningOutcomes();
+  }, []);
+
+  // Fetch student data
+  useEffect(() => {
+    const fetchStudent = async () => {
+      if (!studentId || !className) {
+        console.error("Missing studentId or className");
+        return;
+      }
+
+      try {
+        // First get the class ID
+        const { data: classData, error: classError } = await supabase
+          .from("classes")
+          .select("id")
+          .eq("name", className)
+          .single();
+
+        if (classError) {
+          console.error("Error fetching class:", classError);
+          return;
+        }
+
+        if (!classData) {
+          console.error("Class not found");
+          return;
+        }
+
+        // Then get the student data
+        const { data: studentData, error: studentError } = await supabase
+          .from("students")
+          .select("name, email, student_id, avatar")
+          .eq("student_id", studentId)
+          .eq("class_id", classData.id)
+          .single();
+
+        if (studentError) {
+          console.error("Error fetching student:", studentError);
+          return;
+        }
+
+        if (studentData) {
+          setStudent({
+            name: studentData.name,
+            email: studentData.email,
+            studentId: studentData.student_id,
+            avatar: studentData.avatar,
+          });
+        }
+      } catch (error) {
+        console.error("Error in fetchStudent:", error);
+      }
+    };
+
+    fetchStudent();
+  }, [studentId, className]);
 
   const [selectedMomentId, setSelectedMomentId] = useState<string>("");
-  const [selectedOutcomes, setSelectedOutcomes] = useState<string[]>([]);
+  const [selectedOutcomes, setSelectedOutcomes] = useState<Set<string>>(
+    new Set()
+  );
   const [isRecording, setIsRecording] = useState(false);
-  const [transcript, setTranscript] = useState<string>("");
+  const [transcript, setTranscript] = useState("");
+  const [editedTranscript, setEditedTranscript] = useState("");
   const [recordingError, setRecordingError] = useState<string>("");
+  const [showFeedback, setShowFeedback] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [feedbacks, setFeedbacks] = useState<
-    Record<
-      string,
-      Array<{ reviewer: string; feedback: string; feedforward: string }>
-    >
+    Record<string, Array<{ feedback: string; feedforward: string }>>
   >({});
 
-  const canRecord = !!selectedMomentId && selectedOutcomes.length > 0;
+  const canRecord = !!selectedMomentId && selectedOutcomes.size > 0;
 
   // Start/stop recording met Web Speech API
   const handleRecording = () => {
@@ -479,6 +257,7 @@ export default function RecordPage() {
     if (!canRecord) return;
     if (!isRecording) {
       setTranscript("");
+      setEditedTranscript("");
       const SpeechRecognition =
         (window as any).SpeechRecognition ||
         (window as any).webkitSpeechRecognition;
@@ -500,6 +279,7 @@ export default function RecordPage() {
           }
         }
         setTranscript(finalTranscript.trim());
+        setEditedTranscript(finalTranscript.trim());
       };
       recognition.onerror = (event: any) => {
         setRecordingError("Speech recognition error: " + event.error);
@@ -519,16 +299,24 @@ export default function RecordPage() {
     }
   };
 
+  // Transfer transcript to feedback/feedforward
+  const transferTranscript = () => {
+    Array.from(selectedOutcomes).forEach((loId) => {
+      addFeedback(loId);
+    });
+    setShowFeedback(true);
+  };
+
   // Voeg feedback toe aan een leeruitkomst
   const addFeedback = (outcomeId: string) => {
-    const feedbackText = `Feedback from ${TEACHER_NAME} for ${student?.name}: ${transcript}`;
-    const feedforwardText = `Feed forward from ${TEACHER_NAME} for ${student?.name}: ${transcript}`;
+    const feedbackText = transcript || "No feedback provided";
+    const feedforwardText = transcript || "No feedforward provided";
+
     setFeedbacks((prev) => ({
       ...prev,
       [outcomeId]: [
         ...(prev[outcomeId] || []),
         {
-          reviewer: TEACHER_NAME,
           feedback: feedbackText,
           feedforward: feedforwardText,
         },
@@ -556,47 +344,16 @@ export default function RecordPage() {
     navigator.clipboard.writeText(text);
   };
 
-  if (!className || !student) {
-    return (
-      <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow text-center">
-        <h1 className="text-xl font-semibold mb-4">Student not found</h1>
-        <p>
-          Please select a student from the{" "}
-          <Link
-            href="/dashboard"
-            className="text-blue-600 underline hover:text-blue-800 transition"
-          >
-            dashboard
-          </Link>
-          .
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-7xl mx-auto mt-10 p-6 bg-white rounded shadow">
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Record Feedback</h1>
-          {className && student && (
-            <div className="mt-2 text-sm text-gray-600">
-              Class: {className} | Student: {student.name}
-            </div>
-          )}
-          <div className="mt-2">
-            <Link href="/progress" className="text-blue-600 hover:underline">
-              Progress
-            </Link>
-          </div>
-        </div>
-      </header>
-      <div className="mb-4 text-gray-700 font-medium">
-        Teacher: {TEACHER_NAME}
-      </div>
-      <div className="flex items-center gap-4 mb-6">
+    <div className="max-w-7xl mx-auto bg-white rounded-xl shadow p-8 mt-6">
+      <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+        Record Feedback
+      </h1>
+      <div className="flex items-center gap-4 my-6">
         <img
-          src={student.avatar}
+          src={
+            student.avatar || "https://randomuser.me/api/portraits/lego/1.jpg"
+          }
           alt={student.name}
           className="w-20 h-20 rounded-full object-cover border"
         />
@@ -604,87 +361,116 @@ export default function RecordPage() {
           <div className="text-lg font-bold text-gray-900">{student.name}</div>
           <div className="text-gray-600">{student.email}</div>
           <div className="text-gray-400 text-sm">{student.studentId}</div>
-          <div className="mt-2 text-blue-700 font-medium">{className}</div>
+          <div className="mt-2 text-gray-600">{className}</div>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        {/* Feedback moments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        {/* Feedback Moments */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
             Select a feedback moment
           </h2>
-          <ul className="space-y-3">
+          <div className="space-y-2">
             {feedbackMoments.map((moment) => (
-              <li key={moment.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMomentId(moment.id)}
-                  className={`w-full text-left border rounded p-4 bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer ${
-                    selectedMomentId === moment.id
-                      ? "border-blue-600 bg-blue-50 shadow"
-                      : "hover:bg-blue-50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium text-gray-900">
-                      {moment.name}
-                    </div>
+              <button
+                key={moment.id}
+                className={`w-full text-left p-4 rounded-lg border transition ${
+                  selectedMomentId === moment.id
+                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500"
+                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                }`}
+                onClick={() => setSelectedMomentId(moment.id)}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-1 ${
+                      selectedMomentId === moment.id
+                        ? "border-blue-500 bg-blue-500"
+                        : "border-gray-300"
+                    }`}
+                  >
                     {selectedMomentId === moment.id && (
-                      <span className="ml-4 text-blue-600 font-bold">
-                        Selected
-                      </span>
+                      <div className="w-2 h-2 rounded-full bg-white m-auto mt-[3px]" />
                     )}
                   </div>
-                  <div className="text-sm text-gray-500 mb-1">
-                    {moment.date}
+                  <div>
+                    <h3 className="font-medium text-gray-900">{moment.name}</h3>
+                    <p className="text-sm text-gray-500">{moment.date}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {moment.description}
+                    </p>
                   </div>
-                  <div className="text-gray-700 text-sm">
-                    {moment.description}
-                  </div>
-                </button>
-              </li>
+                </div>
+              </button>
             ))}
-          </ul>
+          </div>
         </div>
-        {/* Learning outcomes */}
+
+        {/* Learning Outcomes */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">
-            Select the learning outcomes
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            Select learning outcomes
           </h2>
-          <ul className="space-y-3">
-            {learningOutcomes.map((lo) => (
-              <li key={lo.id}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedOutcomes(
-                      selectedOutcomes.includes(lo.id)
-                        ? selectedOutcomes.filter((id) => id !== lo.id)
-                        : [...selectedOutcomes, lo.id]
-                    )
+          <div className="space-y-2">
+            {learningOutcomes.map((outcome) => (
+              <button
+                key={outcome.id}
+                className={`w-full text-left p-4 rounded-lg border transition ${
+                  selectedOutcomes.has(outcome.id)
+                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500"
+                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                }`}
+                onClick={() => {
+                  const newSelected = new Set(selectedOutcomes);
+                  if (selectedOutcomes.has(outcome.id)) {
+                    newSelected.delete(outcome.id);
+                  } else {
+                    newSelected.add(outcome.id);
                   }
-                  className={`w-full text-left border rounded p-4 bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer flex flex-col items-start ${
-                    selectedOutcomes.includes(lo.id)
-                      ? "border-blue-600 bg-blue-50 shadow"
-                      : "hover:bg-blue-50"
-                  }`}
-                >
-                  <div className="flex items-center mb-1">
-                    <input
-                      type="checkbox"
-                      checked={selectedOutcomes.includes(lo.id)}
-                      readOnly
-                      className="mr-3 accent-blue-600"
-                    />
-                    <span className="font-medium text-gray-900">
-                      {lo.title}
-                    </span>
+                  setSelectedOutcomes(newSelected);
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-1 ${
+                      selectedOutcomes.has(outcome.id)
+                        ? "border-blue-500 bg-blue-500"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    {selectedOutcomes.has(outcome.id) && (
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    )}
                   </div>
-                  <div className="text-gray-700 text-sm">{lo.description}</div>
-                </button>
-              </li>
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {outcome.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {outcome.description}
+                    </p>
+                    {outcome.level && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Level: {outcome.level}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </button>
             ))}
-          </ul>
+          </div>
         </div>
       </div>
       <div className="mt-8">
@@ -702,7 +488,7 @@ export default function RecordPage() {
             } else {
               setIsRecording(false);
               // Voeg feedback toe aan alle geselecteerde leeruitkomsten
-              selectedOutcomes.forEach((loId) => {
+              Array.from(selectedOutcomes).forEach((loId) => {
                 addFeedback(loId);
               });
             }
@@ -728,70 +514,93 @@ export default function RecordPage() {
         {transcript && !isRecording && (
           <div className="mt-6 p-4 bg-gray-100 rounded border text-gray-800">
             <h3 className="font-semibold mb-2">Transcript</h3>
-            <p>{transcript}</p>
-            {/* Feedback/feedforward per leeruitkomst */}
-            <div className="mt-6 space-y-6">
-              {selectedOutcomes.map((loId) => {
-                const lo = learningOutcomes.find((l) => l.id === loId);
-                const feedbackArr = feedbacks[loId] || [];
-                return lo && feedbackArr.length > 0 ? (
-                  <div key={loId} className="bg-white border rounded p-4">
-                    <div className="font-semibold text-gray-900 mb-2">
-                      {lo.title}
-                    </div>
-                    <div className="mb-4">
-                      <div className="text-xs text-gray-500 mb-1">
-                        Reviewer: {feedbackArr[0]?.reviewer}
-                      </div>
-                      <div className="mb-2">
-                        <label className="block text-xs font-semibold mb-1">
-                          Feedback
-                        </label>
-                        <div className="flex gap-2 items-start">
-                          <textarea
-                            className="border rounded px-2 py-1 w-full text-sm"
-                            rows={6}
-                            value={feedbackArr[0]?.feedback}
-                            readOnly
-                          />
-                          <button
-                            type="button"
-                            className="px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300"
-                            onClick={() =>
-                              copyToClipboard(feedbackArr[0]?.feedback)
-                            }
-                          >
-                            Copy
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold mb-1">
-                          Feed forward
-                        </label>
-                        <div className="flex gap-2 items-start">
-                          <textarea
-                            className="border rounded px-2 py-1 w-full text-sm"
-                            rows={6}
-                            value={feedbackArr[0]?.feedforward}
-                            readOnly
-                          />
-                          <button
-                            type="button"
-                            className="px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300"
-                            onClick={() =>
-                              copyToClipboard(feedbackArr[0]?.feedforward)
-                            }
-                          >
-                            Copy
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null;
-              })}
+            <div className="mb-4">
+              <textarea
+                className="w-full p-3 border rounded-lg bg-white min-h-[150px]"
+                value={editedTranscript}
+                onChange={(e) => setEditedTranscript(e.target.value)}
+                placeholder="Edit your transcript here..."
+              />
             </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                You can edit the transcript above before converting it to
+                feedback. The edited text will be used for both feedback and
+                feedforward for all selected learning outcomes.
+              </p>
+            </div>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              onClick={transferTranscript}
+            >
+              Transfer to Feedback
+            </button>
+            {/* Feedback/feedforward per leeruitkomst */}
+            {showFeedback && (
+              <div className="mt-6 space-y-6">
+                {Array.from(selectedOutcomes).map((loId: string) => {
+                  const outcome = learningOutcomes.find((lo) => lo.id === loId);
+                  if (!outcome) return null;
+                  const feedbackArr = feedbacks[loId] || [];
+                  return (
+                    <div key={loId} className="bg-white border rounded p-4">
+                      <div className="font-semibold text-gray-900 mb-2">
+                        {outcome.title}
+                      </div>
+                      <div className="mb-4">
+                        <div className="text-xs text-gray-500 mb-1">
+                          Reviewer: {teacherName}
+                        </div>
+                        <div className="mb-2">
+                          <label className="block text-xs font-semibold mb-1">
+                            Feedback
+                          </label>
+                          <div className="flex gap-2 items-start">
+                            <textarea
+                              className="border rounded px-2 py-1 w-full text-sm"
+                              rows={6}
+                              value={feedbackArr[0]?.feedback}
+                              readOnly
+                            />
+                            <button
+                              type="button"
+                              className="px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300"
+                              onClick={() =>
+                                copyToClipboard(feedbackArr[0]?.feedback)
+                              }
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold mb-1">
+                            Feed forward
+                          </label>
+                          <div className="flex gap-2 items-start">
+                            <textarea
+                              className="border rounded px-2 py-1 w-full text-sm"
+                              rows={6}
+                              value={feedbackArr[0]?.feedforward}
+                              readOnly
+                            />
+                            <button
+                              type="button"
+                              className="px-2 py-1 bg-gray-200 rounded text-xs hover:bg-gray-300"
+                              onClick={() =>
+                                copyToClipboard(feedbackArr[0]?.feedforward)
+                              }
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
