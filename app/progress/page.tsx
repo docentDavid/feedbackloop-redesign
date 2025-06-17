@@ -244,17 +244,46 @@ export default function ProgressPage() {
     const fetchLearningOutcomes = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("learning_outcomes")
-          .select("*");
-
-        if (error) {
-          console.error("Error fetching learning outcomes:", error);
-          setLearningOutcomes([]);
-        } else {
-          console.log("Fetched learning outcomes:", data);
-          setLearningOutcomes(data || []);
+        let classId = null;
+        if (selectedClass) {
+          // Fetch the id for the selected class
+          const { data: classData, error: classError } = await supabase
+            .from("classes")
+            .select("id")
+            .eq("name", selectedClass)
+            .single();
+          if (classError) {
+            console.error("Error fetching class id:", classError);
+          } else {
+            classId = classData?.id;
+          }
         }
+        let learningOutcomesData = [];
+        if (classId) {
+          // Fetch learning outcomes for the class
+          const { data, error } = await supabase
+            .from("learning_outcomes")
+            .select("*")
+            .eq("class_id", classId);
+          if (error) {
+            console.error("Error fetching learning outcomes:", error);
+            learningOutcomesData = [];
+          } else {
+            learningOutcomesData = data || [];
+          }
+        } else {
+          // Fallback: fetch all if no classId
+          const { data, error } = await supabase
+            .from("learning_outcomes")
+            .select("*");
+          if (error) {
+            console.error("Error fetching learning outcomes:", error);
+            learningOutcomesData = [];
+          } else {
+            learningOutcomesData = data || [];
+          }
+        }
+        setLearningOutcomes(learningOutcomesData);
       } catch (error) {
         console.error("Error fetching learning outcomes:", error);
         setLearningOutcomes([]);

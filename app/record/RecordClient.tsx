@@ -158,13 +158,30 @@ export default function RecordClient() {
   // Fetch learning outcomes
   useEffect(() => {
     const fetchLearningOutcomes = async () => {
+      if (!className) return;
+      // Fetch class id for the selected class name
+      const { data: classData, error: classError } = await supabase
+        .from("classes")
+        .select("id")
+        .eq("name", className)
+        .single();
+      if (classError || !classData) {
+        console.error(
+          "Error fetching class id for learning outcomes:",
+          classError
+        );
+        setLearningOutcomes([]);
+        return;
+      }
+      // Fetch learning outcomes for this class
       const { data, error } = await supabase
         .from("learning_outcomes")
         .select("*")
+        .eq("class_id", classData.id)
         .order("title", { ascending: true });
-
       if (error) {
         console.error("Error fetching learning outcomes:", error);
+        setLearningOutcomes([]);
       } else if (data) {
         setLearningOutcomes(
           data.map((outcome) => ({
@@ -176,9 +193,8 @@ export default function RecordClient() {
         );
       }
     };
-
     fetchLearningOutcomes();
-  }, []);
+  }, [className]);
 
   // Fetch student data
   useEffect(() => {
