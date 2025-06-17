@@ -47,7 +47,7 @@ export default function ProgressPage() {
   const [learningOutcomes, setLearningOutcomes] = useState<
     Array<{
       id: string;
-      name: string;
+      title: string;
       description: string;
     }>
   >([]);
@@ -74,7 +74,25 @@ export default function ProgressPage() {
       progress_level: string;
     }>
   >([]);
+  const [feedbacks, setFeedbacks] = useState<
+    Array<{
+      id: number;
+      student_id: string;
+      learning_outcome_id: string;
+      feedback_moment_id: string;
+      reviewer: string;
+      feedback: string;
+      feedforward: string;
+      created_at: string;
+    }>
+  >([]);
   const router = useRouter();
+
+  const sortedFeedbackMoments = [...feedbackMoments].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  const [momentPage, setMomentPage] = useState(0); // 0 = latest
+  const currentMoment = sortedFeedbackMoments[momentPage] || null;
 
   const getProgressValue = (level: string) => {
     const levels = { U: 0, O: 1, B: 2, P: 3, A: 4 };
@@ -112,7 +130,7 @@ export default function ProgressPage() {
         callbacks: {
           title: function (context: any) {
             const outcome = learningOutcomes[context[0].dataIndex];
-            return outcome?.name || "";
+            return outcome?.title || "";
           },
           label: function (context: any) {
             const labels = [
@@ -137,7 +155,7 @@ export default function ProgressPage() {
   useEffect(() => {
     if (learningOutcomes.length > 0) {
       const newChartData = {
-        labels: learningOutcomes.map((outcome) => outcome.name),
+        labels: learningOutcomes.map((outcome) => outcome.title),
         datasets: [
           {
             label: "Current Progress",
@@ -230,32 +248,32 @@ export default function ProgressPage() {
 
         if (error) {
           console.error("Error fetching learning outcomes:", error);
-          // Add dummy learning outcomes
+          // Add dummy learning outcomes with 'title'
           setLearningOutcomes([
             {
               id: "1",
-              name: "Frontend Development",
+              title: "Frontend Development",
               description:
                 "Building responsive and interactive web applications",
             },
             {
               id: "2",
-              name: "Backend Development",
+              title: "Backend Development",
               description: "Creating and managing server-side applications",
             },
             {
               id: "3",
-              name: "Database Management",
+              title: "Database Management",
               description: "Designing and implementing database solutions",
             },
             {
               id: "4",
-              name: "Version Control",
+              title: "Version Control",
               description: "Managing code versions and collaboration",
             },
             {
               id: "5",
-              name: "Testing & Debugging",
+              title: "Testing & Debugging",
               description: "Writing tests and fixing bugs",
             },
           ]);
@@ -499,9 +517,47 @@ export default function ProgressPage() {
     fetchProgressHistory();
   }, [selectedStudent]);
 
+  // Fetch feedbacks for the selected student and current moment
+  useEffect(() => {
+    const fetchFeedbacks = async () => {
+      if (!selectedStudent || !currentMoment) {
+        setFeedbacks([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("student_feedback")
+        .select("*")
+        .eq("student_id", selectedStudent.studentId)
+        .eq("feedback_moment_id", currentMoment.id);
+      if (error) {
+        setFeedbacks([]);
+        console.log("Supabase feedback fetch error:", error);
+      } else {
+        setFeedbacks(data || []);
+        console.log("DEBUG selectedStudent:", selectedStudent);
+        console.log("DEBUG currentMoment:", currentMoment);
+        console.log("DEBUG fetched feedbacks:", data);
+      }
+    };
+    fetchFeedbacks();
+  }, [selectedStudent, currentMoment]);
+
   // Sort students by last name
   const sortedStudents = [...students].sort((a, b) => {
     return getLastName(a.name).localeCompare(getLastName(b.name));
+  });
+
+  // Sort learning outcomes: LO1 first, then the rest in order
+  const sortedLearningOutcomes = [...learningOutcomes].sort((a, b) => {
+    const getLO = (title: string) => {
+      const match = title.match(/LO(\d+)/i);
+      return match ? parseInt(match[1], 10) : 99;
+    };
+    const aLO = getLO(a.title);
+    const bLO = getLO(b.title);
+    if (aLO === 1) return -1;
+    if (bLO === 1) return 1;
+    return aLO - bLO;
   });
 
   const perPage =
@@ -528,7 +584,7 @@ export default function ProgressPage() {
             <div className="relative inline-block w-full max-w-md w-80 mb-4">
               <select
                 id="classSelect"
-                className="appearance-none border rounded px-4 pr-10 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                className="appearance-none border rounded px-4 pr-10 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full cursor-pointer"
                 value={selectedClass}
                 onChange={(e) => {
                   setSelectedClass(e.target.value);
@@ -568,10 +624,10 @@ export default function ProgressPage() {
               <label className="sr-only" htmlFor="studentsPerPage">
                 Show
               </label>
-              <div className="relative inline-block w-full max-w-xs">
+              <div className="relative inline-block w-full max-w-md w-80">
                 <select
                   id="studentsPerPage"
-                  className="appearance-none border rounded px-4 pr-10 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                  className="appearance-none border rounded px-4 pr-10 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full cursor-pointer"
                   value={studentsPerPage}
                   onChange={(e) => {
                     const value =
@@ -706,18 +762,49 @@ export default function ProgressPage() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Progress History
                   </h3>
+                  {/* Pagination Controls */}
+                  {sortedFeedbackMoments.length > 1 && (
+                    <div className="flex justify-between items-center mb-4">
+                      <button
+                        className="px-3 py-1 rounded border text-gray-500 disabled:opacity-50 cursor-pointer hover:bg-gray-50"
+                        onClick={() => setMomentPage((p) => Math.max(0, p - 1))}
+                        disabled={momentPage === 0}
+                      >
+                        Next
+                      </button>
+                      <span className="text-sm text-gray-700">
+                        {`Moment ${
+                          sortedFeedbackMoments.length - momentPage
+                        } of ${sortedFeedbackMoments.length}`}
+                      </span>
+                      <button
+                        className="px-3 py-1 rounded border text-gray-500 disabled:opacity-50 cursor-pointer hover:bg-gray-50"
+                        onClick={() =>
+                          setMomentPage((p) =>
+                            Math.min(sortedFeedbackMoments.length - 1, p + 1)
+                          )
+                        }
+                        disabled={
+                          momentPage === sortedFeedbackMoments.length - 1
+                        }
+                      >
+                        Previous
+                      </button>
+                    </div>
+                  )}
                   <div className="bg-white p-6 rounded-lg">
                     {isLoading ? (
                       <div className="flex justify-center items-center h-32">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                       </div>
-                    ) : feedbackMoments.length > 0 ? (
-                      <div className="space-y-8">
-                        {feedbackMoments.map((moment, index) => {
+                    ) : sortedFeedbackMoments.length > 0 && currentMoment ? (
+                      <div>
+                        {/* Only show the current moment */}
+                        {(() => {
+                          const moment = currentMoment;
                           const momentProgress = progressHistory.filter(
                             (p) => p.feedback_moment_id === moment.id
                           );
-
                           return (
                             <div key={moment.id}>
                               {/* Header */}
@@ -730,7 +817,6 @@ export default function ProgressPage() {
                                   {new Date(moment.date).toLocaleDateString()}
                                 </p>
                               </div>
-
                               {/* Schedule Grid */}
                               <div>
                                 {/* Header Row */}
@@ -757,27 +843,36 @@ export default function ProgressPage() {
                                     </div>
                                   </div>
                                 </div>
-
                                 {/* Learning Outcomes Rows */}
                                 <div className="space-y-3">
-                                  {learningOutcomes.map((outcome) => {
+                                  {sortedLearningOutcomes.map((outcome) => {
                                     const progress = momentProgress.find(
                                       (p) =>
                                         p.learning_outcome_id === outcome.id
                                     );
                                     const selectedLevel =
                                       progress?.progress_level || "U";
-
                                     return (
                                       <div
                                         key={outcome.id}
                                         className="grid grid-cols-6 gap-4 items-center"
                                       >
-                                        {/* Learning Outcome Name */}
-                                        <div className="col-span-2">
-                                          <span className="text-sm font-medium text-gray-900 whitespace-nowrap">
-                                            {outcome.name}
+                                        {/* Learning Outcome Title */}
+                                        <div className="col-span-2 min-w-[220px] relative group">
+                                          <span
+                                            className="text-base font-medium text-gray-800 block truncate max-w-[200px] cursor-pointer"
+                                            title={outcome.title}
+                                          >
+                                            {outcome.title?.length > 32
+                                              ? outcome.title.slice(0, 29) +
+                                                "..."
+                                              : outcome.title || "(no title)"}
                                           </span>
+                                          {outcome.description && (
+                                            <div className="absolute left-0 z-20 hidden group-hover:block bg-gray-900 text-white text-sm rounded px-3 py-2 shadow-lg max-w-xs mt-2 whitespace-pre-line">
+                                              {outcome.description}
+                                            </div>
+                                          )}
                                         </div>
                                         {/* Score Boxes */}
                                         <div className="col-span-4">
@@ -809,7 +904,7 @@ export default function ProgressPage() {
                               </div>
                             </div>
                           );
-                        })}
+                        })()}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
@@ -820,115 +915,67 @@ export default function ProgressPage() {
                 </div>
 
                 {/* Existing Learning Outcomes Section */}
-                <div>
+                <div className="mt-12">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Current Progress
+                    Current Feedback
                   </h3>
-                  <div className="bg-white p-6 rounded-lg border">
-                    <div className="mb-6">
-                      <p className="text-sm text-gray-600 mb-2">
-                        This section shows the student's progress across all
-                        learning outcomes.
-                      </p>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <span className="font-medium">Progress Levels:</span>
-                        {["U", "O", "B", "P", "A"].map((level, index) => (
-                          <span key={level} className="flex items-center gap-1">
-                            {level}
-                            {index < 4 && (
-                              <span className="text-gray-400">→</span>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                  <div>
                     {isLoading ? (
-                      <div className="flex justify-center items-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                      <div className="flex justify-center items-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                       </div>
-                    ) : learningOutcomes.length > 0 ? (
-                      <div className="space-y-3">
-                        {learningOutcomes.map((outcome) => {
-                          const progress = studentProgress.find(
-                            (p) => p.learning_outcome_id === outcome.id
+                    ) : sortedLearningOutcomes.length > 0 ? (
+                      <div className="space-y-6">
+                        {sortedLearningOutcomes.map((outcome) => {
+                          // Find feedback for this learning outcome and current moment
+                          const feedbackForOutcome = feedbacks.find(
+                            (fb) =>
+                              fb.learning_outcome_id === String(outcome.id) &&
+                              fb.feedback_moment_id ===
+                                String(currentMoment?.id)
                           );
-                          const level = progress?.progress_level || "U";
-                          const levelNames = {
-                            U: "Undefined",
-                            O: "Orienting",
-                            B: "Beginning",
-                            P: "Proficient",
-                            A: "Advanced",
-                          };
 
                           return (
                             <div
                               key={outcome.id}
-                              className="py-2 border-b border-gray-100 last:border-0"
+                              className="p-4 bg-gray-50 rounded-lg mb-4"
                             >
-                              <div className="flex items-center justify-between mb-1">
-                                <h4 className="text-base font-medium text-gray-900">
-                                  {outcome.name}
-                                </h4>
-                                <span
-                                  className={`px-2 py-0.5 rounded text-sm font-medium
-                                  ${
-                                    level === "U"
-                                      ? "bg-gray-100 text-gray-600"
-                                      : level === "O"
-                                      ? "bg-blue-100 text-blue-600"
-                                      : level === "B"
-                                      ? "bg-yellow-100 text-yellow-600"
-                                      : level === "P"
-                                      ? "bg-green-100 text-green-600"
-                                      : "bg-purple-100 text-purple-600"
-                                  }`}
-                                >
-                                  {level} -{" "}
-                                  {levelNames[level as keyof typeof levelNames]}
-                                </span>
+                              <div className="mb-2 text-base font-medium text-gray-800">
+                                {outcome.title}
                               </div>
-                              <p className="text-sm text-gray-600 mb-2">
-                                {outcome.description}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${
-                                      level === "U"
-                                        ? "w-0"
-                                        : level === "O"
-                                        ? "w-1/4"
-                                        : level === "B"
-                                        ? "w-1/2"
-                                        : level === "P"
-                                        ? "w-3/4"
-                                        : "w-full"
-                                    } ${
-                                      level === "U"
-                                        ? "bg-gray-300"
-                                        : level === "O"
-                                        ? "bg-blue-400"
-                                        : level === "B"
-                                        ? "bg-yellow-400"
-                                        : level === "P"
-                                        ? "bg-green-400"
-                                        : "bg-purple-400"
-                                    }`}
-                                  />
+                              {feedbackForOutcome ? (
+                                <div className="space-y-2">
+                                  <div className="text-sm text-gray-600 mb-1">
+                                    <span className="font-semibold text-gray-700">
+                                      {feedbackForOutcome.reviewer}
+                                    </span>
+                                    <span className="text-gray-400 ml-2">
+                                      {new Date(
+                                        feedbackForOutcome.created_at
+                                      ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <div className="bg-white p-3 rounded-md">
+                                    <div className="text-sm text-gray-800 mb-2">
+                                      <span className="font-semibold">
+                                        Feedback:
+                                      </span>{" "}
+                                      {feedbackForOutcome.feedback}
+                                    </div>
+                                    <div className="text-sm text-gray-800">
+                                      <span className="font-semibold">
+                                        Feedforward:
+                                      </span>{" "}
+                                      {feedbackForOutcome.feedforward}
+                                    </div>
+                                  </div>
                                 </div>
-                                <span className="text-xs text-gray-500">
-                                  {level === "U"
-                                    ? "0%"
-                                    : level === "O"
-                                    ? "25%"
-                                    : level === "B"
-                                    ? "50%"
-                                    : level === "P"
-                                    ? "75%"
-                                    : "100%"}
-                                </span>
-                              </div>
+                              ) : (
+                                <div className="text-sm text-gray-400 italic">
+                                  No feedback yet for this learning outcome in
+                                  the current feedback moment
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -943,10 +990,10 @@ export default function ProgressPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-gray-50 rounded-lg border p-8 text-center">
-              <p className="text-gray-500">
-                Select a student to view their progress
-              </p>
+            <div className="flex justify-center mt-8">
+              <span className="text-gray-400 text-base">
+                Select a student to view progress
+              </span>
             </div>
           )}
         </div>
