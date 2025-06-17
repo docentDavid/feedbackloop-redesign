@@ -6,13 +6,16 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseKey) {
   throw new Error("Missing Supabase environment variables");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Add debug log
+console.log("=== DEBUG: Supabase URL ===", supabaseUrl);
 
 // SQL schema for tables
 export const schema = `
@@ -38,6 +41,17 @@ CREATE TABLE IF NOT EXISTS learning_outcomes (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   level TEXT DEFAULT 'undefined'
+);
+
+-- Create student_progress table
+CREATE TABLE IF NOT EXISTS student_progress (
+  id SERIAL PRIMARY KEY,
+  student_id TEXT NOT NULL REFERENCES students(student_id),
+  learning_outcome_id INTEGER NOT NULL REFERENCES learning_outcomes(id),
+  feedback_moment_id INTEGER NOT NULL REFERENCES feedback_moments(id),
+  progress_level TEXT NOT NULL CHECK (progress_level IN ('U', 'O', 'B', 'P', 'A')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(student_id, learning_outcome_id, feedback_moment_id)
 );
 
 -- Create feedback_moments table
@@ -135,4 +149,33 @@ INSERT INTO feedback_moments (name, date, description) VALUES
   ('Portfolio / FeedPulse - versie 3 (Week 15)', '2023-06-15', 'Third iteration of your portfolio'),
   ('Portfolio / FeedPulse - versie 4 (Week 18)', '2023-07-02', 'Fourth/Final iteration of your portfolio')
 ON CONFLICT (name) DO NOTHING;
+
+-- Insert sample progress data for Omar Al-Farsi
+INSERT INTO student_progress (student_id, learning_outcome_id, feedback_moment_id, progress_level) VALUES
+  -- Moment 1 (Week 6)
+  ('S1002046', 1, 1, 'O'),
+  ('S1002046', 2, 1, 'B'),
+  ('S1002046', 3, 1, 'O'),
+  ('S1002046', 4, 1, 'O'),
+  ('S1002046', 5, 1, 'B'),
+  -- Moment 2 (Week 10)
+  ('S1002046', 1, 2, 'B'),
+  ('S1002046', 2, 2, 'P'),
+  ('S1002046', 3, 2, 'B'),
+  ('S1002046', 4, 2, 'B'),
+  ('S1002046', 5, 2, 'P'),
+  -- Moment 3 (Week 15)
+  ('S1002046', 1, 3, 'P'),
+  ('S1002046', 2, 3, 'A'),
+  ('S1002046', 3, 3, 'P'),
+  ('S1002046', 4, 3, 'P'),
+  ('S1002046', 5, 3, 'A'),
+  -- Moment 4 (Week 18)
+  ('S1002046', 1, 4, 'A'),
+  ('S1002046', 2, 4, 'A'),
+  ('S1002046', 3, 4, 'A'),
+  ('S1002046', 4, 4, 'A'),
+  ('S1002046', 5, 4, 'A')
+ON CONFLICT (student_id, learning_outcome_id, feedback_moment_id) DO UPDATE
+SET progress_level = EXCLUDED.progress_level;
 `;

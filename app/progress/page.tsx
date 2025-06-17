@@ -30,6 +30,8 @@ type StudentsPerPage = (typeof studentsPerPageOptions)[number];
 const getLastName = (name: string) =>
   name.split(" ").slice(-1)[0].toLowerCase();
 
+console.log("=== DEBUG: ProgressPage loaded, code is up to date ===");
+
 export default function ProgressPage() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [studentsPerPage, setStudentsPerPage] = useState<StudentsPerPage>(12);
@@ -248,35 +250,7 @@ export default function ProgressPage() {
 
         if (error) {
           console.error("Error fetching learning outcomes:", error);
-          // Add dummy learning outcomes with 'title'
-          setLearningOutcomes([
-            {
-              id: "1",
-              title: "Frontend Development",
-              description:
-                "Building responsive and interactive web applications",
-            },
-            {
-              id: "2",
-              title: "Backend Development",
-              description: "Creating and managing server-side applications",
-            },
-            {
-              id: "3",
-              title: "Database Management",
-              description: "Designing and implementing database solutions",
-            },
-            {
-              id: "4",
-              title: "Version Control",
-              description: "Managing code versions and collaboration",
-            },
-            {
-              id: "5",
-              title: "Testing & Debugging",
-              description: "Writing tests and fixing bugs",
-            },
-          ]);
+          setLearningOutcomes([]);
         } else {
           console.log("Fetched learning outcomes:", data);
           setLearningOutcomes(data || []);
@@ -303,24 +277,13 @@ export default function ProgressPage() {
 
         if (error) {
           console.error("Error fetching student progress:", error);
-          // Add dummy current progress for Omar
-          if (selectedStudent.name === "Omar Al-Farsi") {
-            setStudentProgress([
-              { learning_outcome_id: "1", progress_level: "P" },
-              { learning_outcome_id: "2", progress_level: "A" },
-              { learning_outcome_id: "3", progress_level: "P" },
-              { learning_outcome_id: "4", progress_level: "A" },
-              { learning_outcome_id: "5", progress_level: "P" },
-            ]);
-          } else {
-            setStudentProgress([]);
-          }
+          setStudentProgress([]);
         } else {
           console.log("Fetched student progress:", data);
           setStudentProgress(data || []);
         }
       } catch (error) {
-        console.error("Error fetching student progress:", error);
+        console.error("Error in student progress operations:", error);
         setStudentProgress([]);
       }
     };
@@ -328,6 +291,43 @@ export default function ProgressPage() {
     fetchLearningOutcomes();
     fetchStudentProgress();
   }, [selectedStudent]);
+
+  const fetchProgressHistory = async () => {
+    try {
+      if (!selectedStudent) {
+        setProgressHistory([]);
+        return;
+      }
+
+      const studentId = selectedStudent.studentId;
+      const { data: studentData, error: studentError } = await supabase
+        .from("student_progress")
+        .select("*")
+        .eq("student_id", studentId);
+
+      if (studentError) {
+        console.error("Error fetching student progress:", studentError);
+        setProgressHistory([]);
+        return;
+      }
+
+      if (!studentData || studentData.length === 0) {
+        setProgressHistory([]);
+        return;
+      }
+
+      const formattedData = studentData.map((item) => ({
+        feedback_moment_id: String(item.feedback_moment_id),
+        learning_outcome_id: String(item.learning_outcome_id),
+        progress_level: item.progress_level,
+      }));
+
+      setProgressHistory(formattedData);
+    } catch (error) {
+      console.error("Error in progress history operations:", error);
+      setProgressHistory([]);
+    }
+  };
 
   useEffect(() => {
     const fetchFeedbackMoments = async () => {
@@ -339,35 +339,8 @@ export default function ProgressPage() {
 
         if (error) {
           console.error("Error fetching feedback moments:", error);
-          // Add dummy feedback moments with teachers
-          setFeedbackMoments([
-            {
-              id: "1",
-              name: "Portfolio 1",
-              date: "2024-01-15",
-              teacher: "John Smith",
-            },
-            {
-              id: "2",
-              name: "Portfolio 2",
-              date: "2024-02-15",
-              teacher: "Sarah Johnson",
-            },
-            {
-              id: "3",
-              name: "Portfolio 3",
-              date: "2024-03-15",
-              teacher: "Michael Brown",
-            },
-            {
-              id: "4",
-              name: "Portfolio 4",
-              date: "2024-04-15",
-              teacher: "Emma Wilson",
-            },
-          ]);
+          setFeedbackMoments([]);
         } else {
-          console.log("Fetched feedback moments:", data);
           setFeedbackMoments(data || []);
         }
       } catch (error) {
@@ -376,148 +349,10 @@ export default function ProgressPage() {
       }
     };
 
-    const fetchProgressHistory = async () => {
-      if (!selectedStudent) {
-        setProgressHistory([]);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from("student_progress")
-          .select("feedback_moment_id, learning_outcome_id, progress_level")
-          .eq("student_id", selectedStudent.studentId)
-          .order("feedback_moment_id", { ascending: true });
-
-        if (error) {
-          console.error("Error fetching progress history:", error);
-          // Add dummy progress data for Omar
-          if (selectedStudent.name === "Omar Al-Farsi") {
-            const dummyProgress = [
-              // Initial Assessment
-              {
-                feedback_moment_id: "1",
-                learning_outcome_id: "1",
-                progress_level: "U",
-              },
-              {
-                feedback_moment_id: "1",
-                learning_outcome_id: "2",
-                progress_level: "O",
-              },
-              {
-                feedback_moment_id: "1",
-                learning_outcome_id: "3",
-                progress_level: "U",
-              },
-              {
-                feedback_moment_id: "1",
-                learning_outcome_id: "4",
-                progress_level: "O",
-              },
-              {
-                feedback_moment_id: "1",
-                learning_outcome_id: "5",
-                progress_level: "U",
-              },
-              // Mid-term Review
-              {
-                feedback_moment_id: "2",
-                learning_outcome_id: "1",
-                progress_level: "O",
-              },
-              {
-                feedback_moment_id: "2",
-                learning_outcome_id: "2",
-                progress_level: "B",
-              },
-              {
-                feedback_moment_id: "2",
-                learning_outcome_id: "3",
-                progress_level: "O",
-              },
-              {
-                feedback_moment_id: "2",
-                learning_outcome_id: "4",
-                progress_level: "B",
-              },
-              {
-                feedback_moment_id: "2",
-                learning_outcome_id: "5",
-                progress_level: "O",
-              },
-              // Final Assessment
-              {
-                feedback_moment_id: "3",
-                learning_outcome_id: "1",
-                progress_level: "B",
-              },
-              {
-                feedback_moment_id: "3",
-                learning_outcome_id: "2",
-                progress_level: "P",
-              },
-              {
-                feedback_moment_id: "3",
-                learning_outcome_id: "3",
-                progress_level: "B",
-              },
-              {
-                feedback_moment_id: "3",
-                learning_outcome_id: "4",
-                progress_level: "P",
-              },
-              {
-                feedback_moment_id: "3",
-                learning_outcome_id: "5",
-                progress_level: "B",
-              },
-              // End of Semester
-              {
-                feedback_moment_id: "4",
-                learning_outcome_id: "1",
-                progress_level: "P",
-              },
-              {
-                feedback_moment_id: "4",
-                learning_outcome_id: "2",
-                progress_level: "A",
-              },
-              {
-                feedback_moment_id: "4",
-                learning_outcome_id: "3",
-                progress_level: "P",
-              },
-              {
-                feedback_moment_id: "4",
-                learning_outcome_id: "4",
-                progress_level: "A",
-              },
-              {
-                feedback_moment_id: "4",
-                learning_outcome_id: "5",
-                progress_level: "P",
-              },
-            ];
-            setProgressHistory(dummyProgress);
-          } else {
-            setProgressHistory([]);
-          }
-        } else {
-          console.log("Fetched progress history:", data);
-          setProgressHistory(data || []);
-        }
-      } catch (error) {
-        console.error("Error fetching progress history:", error);
-        setProgressHistory([]);
-      }
-    };
-
     fetchFeedbackMoments();
     fetchProgressHistory();
   }, [selectedStudent]);
 
-  // Fetch feedbacks for the selected student and current moment
   useEffect(() => {
     const fetchFeedbacks = async () => {
       if (!selectedStudent || !currentMoment) {
@@ -531,12 +366,9 @@ export default function ProgressPage() {
         .eq("feedback_moment_id", currentMoment.id);
       if (error) {
         setFeedbacks([]);
-        console.log("Supabase feedback fetch error:", error);
+        console.error("Error fetching student feedback:", error);
       } else {
         setFeedbacks(data || []);
-        console.log("DEBUG selectedStudent:", selectedStudent);
-        console.log("DEBUG currentMoment:", currentMoment);
-        console.log("DEBUG fetched feedbacks:", data);
       }
     };
     fetchFeedbacks();
@@ -672,7 +504,9 @@ export default function ProgressPage() {
                     ? "bg-blue-50 border-blue-500"
                     : "bg-gray-50 hover:bg-blue-50"
                 }`}
-                onClick={() => setSelectedStudent(student)}
+                onClick={() => {
+                  setSelectedStudent(student);
+                }}
                 type="button"
               >
                 <img
@@ -759,26 +593,11 @@ export default function ProgressPage() {
               <div className="space-y-6">
                 {/* Progress History Section */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Progress History
-                  </h3>
                   {/* Pagination Controls */}
                   {sortedFeedbackMoments.length > 1 && (
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center my-8">
                       <button
-                        className="px-3 py-1 rounded border text-gray-500 disabled:opacity-50 cursor-pointer hover:bg-gray-50"
-                        onClick={() => setMomentPage((p) => Math.max(0, p - 1))}
-                        disabled={momentPage === 0}
-                      >
-                        Next
-                      </button>
-                      <span className="text-sm text-gray-700">
-                        {`Moment ${
-                          sortedFeedbackMoments.length - momentPage
-                        } of ${sortedFeedbackMoments.length}`}
-                      </span>
-                      <button
-                        className="px-3 py-1 rounded border text-gray-500 disabled:opacity-50 cursor-pointer hover:bg-gray-50"
+                        className="cursor-pointer px-3 py-1 rounded border text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                         onClick={() =>
                           setMomentPage((p) =>
                             Math.min(sortedFeedbackMoments.length - 1, p + 1)
@@ -790,8 +609,39 @@ export default function ProgressPage() {
                       >
                         Previous
                       </button>
+                      <span className="text-sm text-gray-700">
+                        {`Moment ${
+                          sortedFeedbackMoments.length - momentPage
+                        } of ${sortedFeedbackMoments.length}`}
+                      </span>
+                      <button
+                        className="cursor-pointer px-3 py-1 rounded border text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        onClick={() => setMomentPage((p) => Math.max(0, p - 1))}
+                        disabled={momentPage === 0}
+                      >
+                        Next
+                      </button>
                     </div>
                   )}
+
+                  {/* Moment label moved above the title */}
+                  {(() => {
+                    const moment = currentMoment;
+                    if (!moment) return null;
+                    return (
+                      <div className="mb-4">
+                        <h4 className="text-base font-medium text-gray-900">
+                          {moment.name} -{" "}
+                          {new Date(moment.date).toLocaleDateString()}
+                        </h4>
+                      </div>
+                    );
+                  })()}
+
+                  <h3 className="text-lg font-semibold text-gray-900 mt-8">
+                    Progress Overview
+                  </h3>
+
                   <div className="bg-white p-6 rounded-lg">
                     {isLoading ? (
                       <div className="flex justify-center items-center h-32">
@@ -799,112 +649,118 @@ export default function ProgressPage() {
                       </div>
                     ) : sortedFeedbackMoments.length > 0 && currentMoment ? (
                       <div>
-                        {/* Only show the current moment */}
-                        {(() => {
-                          const moment = currentMoment;
-                          const momentProgress = progressHistory.filter(
-                            (p) => p.feedback_moment_id === moment.id
-                          );
-                          return (
-                            <div key={moment.id}>
-                              {/* Header */}
-                              <div className="mb-4">
-                                <h4 className="text-base font-medium text-gray-900">
-                                  {moment.name}
-                                </h4>
-                                <p className="text-sm text-gray-500">
-                                  {moment.teacher} •{" "}
-                                  {new Date(moment.date).toLocaleDateString()}
-                                </p>
+                        {/* Schedule Grid */}
+                        <div>
+                          {/* Header Row */}
+                          <div className="grid grid-cols-6 gap-4 mb-2">
+                            <div className="col-span-2">
+                              <div className="text-sm font-medium text-gray-500">
+                                Learning Outcome
                               </div>
-                              {/* Schedule Grid */}
-                              <div>
-                                {/* Header Row */}
-                                <div className="grid grid-cols-6 gap-4 mb-2">
-                                  <div className="col-span-2">
+                            </div>
+                            <div className="col-span-4">
+                              <div className="grid grid-cols-5 gap-4">
+                                {["U", "O", "B", "P", "A"].map((level) => (
+                                  <div key={level} className="text-center">
                                     <div className="text-sm font-medium text-gray-500">
-                                      Learning Outcome
+                                      {level}
                                     </div>
                                   </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Learning Outcomes Rows */}
+                          <div className="space-y-3">
+                            {sortedLearningOutcomes.map((outcome) => {
+                              // Find progress for this learning outcome in current moment
+                              const progress = progressHistory.find(
+                                (p) =>
+                                  String(p.learning_outcome_id) ===
+                                    String(outcome.id) &&
+                                  String(p.feedback_moment_id) ===
+                                    String(currentMoment?.id)
+                              );
+
+                              // Log the match attempt with more detail
+                              console.log(
+                                `Looking for match - LO: ${outcome.id}, Moment: ${currentMoment?.id}`,
+                                {
+                                  progressHistory,
+                                  currentMoment,
+                                  outcome,
+                                  found: progress,
+                                  matchCriteria: {
+                                    learning_outcome_id: String(outcome.id),
+                                    feedback_moment_id: String(
+                                      currentMoment?.id
+                                    ),
+                                  },
+                                }
+                              );
+
+                              return (
+                                <div
+                                  key={outcome.id}
+                                  className="grid grid-cols-6 gap-4 items-center"
+                                >
+                                  {/* Learning Outcome Title */}
+                                  <div className="col-span-2 min-w-[220px] relative group">
+                                    <span
+                                      className="text-base font-medium text-gray-800 block truncate max-w-[200px] cursor-pointer"
+                                      title={outcome.title}
+                                    >
+                                      {outcome.title?.length > 32
+                                        ? outcome.title.slice(0, 29) + "..."
+                                        : outcome.title || "(no title)"}
+                                    </span>
+                                    {outcome.description && (
+                                      <div className="absolute left-0 z-20 hidden group-hover:block bg-gray-900 text-white text-sm rounded px-3 py-2 shadow-lg max-w-xs mt-2 whitespace-pre-line">
+                                        {outcome.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* Score Boxes */}
                                   <div className="col-span-4">
                                     <div className="grid grid-cols-5 gap-4">
                                       {["U", "O", "B", "P", "A"].map(
-                                        (level) => (
-                                          <div
-                                            key={level}
-                                            className="text-center"
-                                          >
-                                            <div className="text-sm font-medium text-gray-500">
-                                              {level}
+                                        (level) => {
+                                          const isCurrentLevel =
+                                            progress?.progress_level === level;
+
+                                          // Log when we find a match
+                                          if (isCurrentLevel) {
+                                            console.log(
+                                              `Match found - LO: ${outcome.id}, Level: ${level}, Progress:`,
+                                              progress
+                                            );
+                                          }
+
+                                          return (
+                                            <div
+                                              key={level}
+                                              className="text-center"
+                                            >
+                                              <div
+                                                className={`h-8 rounded min-w-[40px] px-2 flex items-center justify-center uppercase ${
+                                                  isCurrentLevel
+                                                    ? "bg-blue-500 text-white font-bold"
+                                                    : "bg-white"
+                                                }`}
+                                              >
+                                                {isCurrentLevel ? level : ""}
+                                              </div>
                                             </div>
-                                          </div>
-                                        )
+                                          );
+                                        }
                                       )}
                                     </div>
                                   </div>
                                 </div>
-                                {/* Learning Outcomes Rows */}
-                                <div className="space-y-3">
-                                  {sortedLearningOutcomes.map((outcome) => {
-                                    const progress = momentProgress.find(
-                                      (p) =>
-                                        p.learning_outcome_id === outcome.id
-                                    );
-                                    const selectedLevel =
-                                      progress?.progress_level || "U";
-                                    return (
-                                      <div
-                                        key={outcome.id}
-                                        className="grid grid-cols-6 gap-4 items-center"
-                                      >
-                                        {/* Learning Outcome Title */}
-                                        <div className="col-span-2 min-w-[220px] relative group">
-                                          <span
-                                            className="text-base font-medium text-gray-800 block truncate max-w-[200px] cursor-pointer"
-                                            title={outcome.title}
-                                          >
-                                            {outcome.title?.length > 32
-                                              ? outcome.title.slice(0, 29) +
-                                                "..."
-                                              : outcome.title || "(no title)"}
-                                          </span>
-                                          {outcome.description && (
-                                            <div className="absolute left-0 z-20 hidden group-hover:block bg-gray-900 text-white text-sm rounded px-3 py-2 shadow-lg max-w-xs mt-2 whitespace-pre-line">
-                                              {outcome.description}
-                                            </div>
-                                          )}
-                                        </div>
-                                        {/* Score Boxes */}
-                                        <div className="col-span-4">
-                                          <div className="grid grid-cols-5 gap-4">
-                                            {["U", "O", "B", "P", "A"].map(
-                                              (level) => (
-                                                <div
-                                                  key={level}
-                                                  className="text-center"
-                                                >
-                                                  <div
-                                                    className={`h-8 rounded min-w-[40px] px-2 ${
-                                                      level === selectedLevel
-                                                        ? "bg-blue-50 text-blue-600 font-semibold"
-                                                        : "bg-gray-50 text-gray-400"
-                                                    } flex items-center justify-center`}
-                                                  >
-                                                    {level}
-                                                  </div>
-                                                </div>
-                                              )
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500">
@@ -917,7 +773,7 @@ export default function ProgressPage() {
                 {/* Existing Learning Outcomes Section */}
                 <div className="mt-12">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Current Feedback
+                    Feedback Overview
                   </h3>
                   <div>
                     {isLoading ? (
@@ -927,13 +783,28 @@ export default function ProgressPage() {
                     ) : sortedLearningOutcomes.length > 0 ? (
                       <div className="space-y-6">
                         {sortedLearningOutcomes.map((outcome) => {
-                          // Find feedback for this learning outcome and current moment
-                          const feedbackForOutcome = feedbacks.find(
+                          // Find all feedback entries for this learning outcome and current moment
+                          const allFeedbacksForOutcome = feedbacks.filter(
                             (fb) =>
                               fb.learning_outcome_id === String(outcome.id) &&
                               fb.feedback_moment_id ===
                                 String(currentMoment?.id)
                           );
+
+                          // Deduplicate feedbacks based on reviewer, feedback, and feedforward
+                          const uniqueKey = (
+                            fb: (typeof allFeedbacksForOutcome)[0]
+                          ) =>
+                            `${fb.reviewer}-${fb.feedback}-${fb.feedforward}`;
+
+                          const feedbacksForOutcome =
+                            allFeedbacksForOutcome.filter(
+                              (fb, index, self) =>
+                                index ===
+                                self.findIndex(
+                                  (f) => uniqueKey(f) === uniqueKey(fb)
+                                )
+                            );
 
                           return (
                             <div
@@ -943,32 +814,41 @@ export default function ProgressPage() {
                               <div className="mb-2 text-base font-medium text-gray-800">
                                 {outcome.title}
                               </div>
-                              {feedbackForOutcome ? (
-                                <div className="space-y-2">
-                                  <div className="text-sm text-gray-600 mb-1">
-                                    <span className="font-semibold text-gray-700">
-                                      {feedbackForOutcome.reviewer}
-                                    </span>
-                                    <span className="text-gray-400 ml-2">
-                                      {new Date(
-                                        feedbackForOutcome.created_at
-                                      ).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  <div className="bg-white p-3 rounded-md">
-                                    <div className="text-sm text-gray-800 mb-2">
-                                      <span className="font-semibold">
-                                        Feedback:
-                                      </span>{" "}
-                                      {feedbackForOutcome.feedback}
-                                    </div>
-                                    <div className="text-sm text-gray-800">
-                                      <span className="font-semibold">
-                                        Feedforward:
-                                      </span>{" "}
-                                      {feedbackForOutcome.feedforward}
-                                    </div>
-                                  </div>
+                              {feedbacksForOutcome.length > 0 ? (
+                                <div className="space-y-4">
+                                  {feedbacksForOutcome.map(
+                                    (feedback, index) => (
+                                      <div
+                                        key={feedback.id}
+                                        className="space-y-2"
+                                      >
+                                        <div className="text-sm text-gray-600 mb-1">
+                                          <span className="font-semibold text-gray-700">
+                                            {feedback.reviewer}
+                                          </span>
+                                          <span className="text-gray-400 ml-2">
+                                            {new Date(
+                                              feedback.created_at
+                                            ).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                        <div className="bg-white p-3 rounded-md">
+                                          <div className="text-sm text-gray-800 mb-2">
+                                            <span className="font-semibold">
+                                              Feedback:
+                                            </span>{" "}
+                                            {feedback.feedback}
+                                          </div>
+                                          <div className="text-sm text-gray-800">
+                                            <span className="font-semibold">
+                                              Feedforward:
+                                            </span>{" "}
+                                            {feedback.feedforward}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )
+                                  )}
                                 </div>
                               ) : (
                                 <div className="text-sm text-gray-400 italic">
