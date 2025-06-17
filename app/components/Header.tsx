@@ -1,12 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "../lib/supabase";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [userName, setUserName] = useState<string>("");
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      if (user && user.email) {
+        // Fetch teacher name from teachers table
+        const { data, error } = await supabase
+          .from("teachers")
+          .select("name")
+          .eq("email", user.email)
+          .single();
+        if (!error && data?.name) {
+          setUserName(data.name);
+        } else {
+          setUserName("");
+        }
+      } else {
+        setUserName("");
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserName("");
+    setIsMenuOpen(false);
+    router.push("/");
+  };
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -57,10 +94,21 @@ const Header = () => {
 
           {/* User Profile Section */}
           <div className="hidden md:flex items-center space-x-4">
-            <span className="text-gray-600">William Janssen</span>
-            <Link href="/logout" className="text-gray-600 hover:text-gray-900">
-              Logout
-            </Link>
+            {user && userName ? (
+              <>
+                <span className="text-gray-600">{userName}</span>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link href="/" className="text-gray-600 hover:text-gray-900">
+                Login
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -124,14 +172,28 @@ const Header = () => {
               Admin
             </Link>
             <div className="pt-4 border-t border-gray-200">
-              <span className="block text-gray-600 mb-2">William Janssen</span>
-              <Link
-                href="/logout"
-                className="block text-gray-600 hover:text-gray-900"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Logout
-              </Link>
+              {user && userName ? (
+                <>
+                  <span className="block text-gray-600 mb-2">{userName}</span>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="block text-gray-600 hover:text-gray-900"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/"
+                  className="block text-gray-600 hover:text-gray-900"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Login
+                </Link>
+              )}
             </div>
           </div>
         )}
